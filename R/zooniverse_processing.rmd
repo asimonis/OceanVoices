@@ -1,0 +1,130 @@
+---
+title: "ZooniverseProcessing"
+author: "Taiki Sakai"
+date: "2022-12-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(rjson)
+library(dplyr)
+library(here)
+library(ggplot2)
+```
+
+```{r}
+classCsv <- here('data', 'Zooniverse Labels', 'ocean-voices-classifications.csv')
+classData <- read.csv(classCsv, stringsAsFactors = FALSE)
+classData$created_at <- as.POSIXct(classData$created_at, format='%Y-%m-%d %H:%M:%S UTC', tz='UTC')
+```
+
+We only want to look at data from most recent workflows 8.15 and 17.2
+
+```{r}
+classData <- filter(classData, workflow_version %in% c('8.15', '17.2'))
+```
+
+Check number of labels selected for each annoation
+
+```{r}
+nLabels <- sapply(classData$annotations, function(x) {
+  length(fromJSON(x)[[1]]$value)
+})
+names(nLabels) <- NULL
+table(nLabels)
+```
+
+"Multiple selections OK" was included by default, so we want to re-work these 
+multi-label cases.
+
+```{r}
+parseValues <- function(x) {
+  # single selections are fine, also renaming one caes to another
+  if(length(x) == 1 &&
+     x != 'Humpback whales and ship noise') {
+    return(x)
+  }
+  # if you selected nothing & something thats confusing, so drop it
+  if('None of the above' %in% x) {
+    return(NA)
+  }
+  # otherwise convert to both
+  'Humpback whales and ships'
+}
+classData$label <- sapply(classData$annotations, function(x) {
+  parseValues(fromJSON(x)[[1]]$value)
+})
+classData$label <- factor(classData$label)
+table(classData$label, classData$workflow_version)
+classData$image <- sapply(classData$subject_data, function(x) {
+  fromJSON(x)[[1]]$subject_id
+})
+```
+
+We want to look at only the retired images, images that are not yet retired
+will have `NULL` for the retired portion of that JSON
+
+```{r}
+classData$retired <- sapply(classData$subject_data, function(x) {
+  json <- fromJSON(x)[[1]]
+  length(json$retired) > 0
+})
+table(classData$retired)
+classData <- classData[classData$retired, ]
+```
+
+Now we want to look at the distribution of labels for each image. 
+
+```{r}
+imgList <- lapply(split(classData, classData$subject_ids), function(x) {
+  x[c('user_id', 'workflow_version', 'label', 'subject_ids', 'created_at', 'image')]
+})
+# if not NULL, num limits the number of samples to use
+labelDist <- function(x, num=NULL) {
+  if(!is.null(num)) {
+    num <- min(num, nrow(x))
+    x <- x[1:num, ]
+  }
+  tab <- table(x$label)
+  n <- sum(tab)
+  tab <- tab / n
+  whichMax <- tab == max(tab)
+  if(sum(whichMax) > 1) {
+    label <- paste0(sum(whichMax), ' tied')
+  } else {
+    label <- names(tab)[whichMax]
+  }
+  max <- tab[whichMax][1]
+  result <- as.list(tab)
+  result$n <- n
+  result$max <- max
+  result$maxLabel <- label
+  result$image <- x$image[1]
+  result
+}
+maxLabs <- lapply(imgList, function(x) {
+  labelDist(x, num=NULL)
+})
+maxLabs <- bind_rows(maxLabs, .id='subject')
+```
+
+The `maxLabs` dataframe has one row for every image. Each row shows the proportion of 
+votes for each label, the number of votes, the max proportion value, and the
+label for the max value. In case of ties for max proportion these are listed as
+"N tied".
+
+```{r}
+str(maxLabs)
+```
+
+Plotting distribution of most-confident class for each image. Ideally these
+would all be 1 if all reviewers agreed on the label
+
+```{r}
+ggplot(maxLabs, aes(x=max, fill=maxLabel)) +
+  geom_histogram(binwidth=.05)
+```
