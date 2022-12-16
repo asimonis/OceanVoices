@@ -135,13 +135,14 @@ ggplot(maxLabs, aes(x=max, fill=maxLabel)) +
 Compare most-confident class for each image with expert level. 
 
 ```{r}
+library(caret)
 
 maxLabs <- select(labelData,subject_id,Expert.Label) %>%
   rename(image=subject_id)%>%
   merge(maxLabs) %>%
   mutate(Agree = Expert.Label==maxLabel)
 
-maxLabs$Expert.Label<-as.factor(maxLabs$Expert.Label)
+# confusionMatrix(as.factor(maxLabs$Expert.Label), as.factor(maxLabs$maxLabel), positive = "True")
 
 LabSummary<-maxLabs %>%
   group_by(Expert.Label) %>%
