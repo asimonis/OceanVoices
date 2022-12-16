@@ -20,6 +20,9 @@ library(ggplot2)
 classCsv <- here('data', 'Zooniverse Labels', 'ocean-voices-classifications.csv')
 classData <- read.csv(classCsv, stringsAsFactors = FALSE)
 classData$created_at <- as.POSIXct(classData$created_at, format='%Y-%m-%d %H:%M:%S UTC', tz='UTC')
+
+labelCsv <- here('data','Zooniverse Labels', 'CCES_010_BetaTest150subjects_labeled.csv')
+labelData <- read.csv(labelCsv, stringsAsFactors = FALSE)
 ```
 
 We only want to look at data from most recent workflows 8.15 and 17.2
@@ -127,4 +130,24 @@ would all be 1 if all reviewers agreed on the label
 ```{r}
 ggplot(maxLabs, aes(x=max, fill=maxLabel)) +
   geom_histogram(binwidth=.05)
+```
+
+Compare most-confident class for each image with expert level. 
+
+```{r}
+
+maxLabs <- select(labelData,subject_id,Expert.Label) %>%
+  rename(image=subject_id)%>%
+  merge(maxLabs) %>%
+  mutate(Agree = Expert.Label==maxLabel)
+
+maxLabs$Expert.Label<-as.factor(maxLabs$Expert.Label)
+
+LabSummary<-maxLabs %>%
+  group_by(Expert.Label) %>%
+  summarize(Correct = sum(Agree==TRUE)/n())
+
+ggplot(LabSummary,aes(Expert.Label,Correct,fill=Expert.Label))+geom_col()+
+  theme(legend.position = 'none')
+
 ```
