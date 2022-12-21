@@ -18,6 +18,8 @@ library(dplyr)
 library(here)
 library(ggplot2)
 library(viridis)
+library(caret)
+library(likert)
 ```
 
 ```{r}
