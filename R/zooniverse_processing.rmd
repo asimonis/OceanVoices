@@ -3,6 +3,9 @@ title: "ZooniverseProcessing"
 author: "Taiki Sakai"
 date: "2022-12-14"
 output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
 
 ```{r setup, include=FALSE}
@@ -14,6 +17,7 @@ library(rjson)
 library(dplyr)
 library(here)
 library(ggplot2)
+library(viridis)
 ```
 
 ```{r}
@@ -41,8 +45,8 @@ names(nLabels) <- NULL
 table(nLabels)
 ```
 
-"Multiple selections OK" was included by default, so we want to re-work these 
-multi-label cases.
+"Multiple selections OK" was included by default, so we want to re-work
+these multi-label cases.
 
 ```{r}
 parseValues <- function(x) {
@@ -68,8 +72,8 @@ classData$image <- sapply(classData$subject_data, function(x) {
 })
 ```
 
-We want to look at only the retired images, images that are not yet retired
-will have `NULL` for the retired portion of that JSON
+We want to look at only the retired images, images that are not yet
+retired will have `NULL` for the retired portion of that JSON
 
 ```{r}
 classData$retired <- sapply(classData$subject_data, function(x) {
@@ -80,7 +84,7 @@ table(classData$retired)
 classData <- classData[classData$retired, ]
 ```
 
-Now we want to look at the distribution of labels for each image. 
+Now we want to look at the distribution of labels for each image.
 
 ```{r}
 imgList <- lapply(split(classData, classData$subject_ids), function(x) {
@@ -115,40 +119,53 @@ maxLabs <- lapply(imgList, function(x) {
 maxLabs <- bind_rows(maxLabs, .id='subject')
 ```
 
-The `maxLabs` dataframe has one row for every image. Each row shows the proportion of 
-votes for each label, the number of votes, the max proportion value, and the
-label for the max value. In case of ties for max proportion these are listed as
-"N tied".
+The `maxLabs` dataframe has one row for every image. Each row shows the
+proportion of votes for each label, the number of votes, the max
+proportion value, and the label for the max value. In case of ties for
+max proportion these are listed as "N tied".
 
 ```{r}
 str(maxLabs)
 ```
 
-Plotting distribution of most-confident class for each image. Ideally these
-would all be 1 if all reviewers agreed on the label
+Plotting distribution of most-confident class for each image. Ideally
+these would all be 1 if all reviewers agreed on the label
 
 ```{r}
 ggplot(maxLabs, aes(x=max, fill=maxLabel)) +
   geom_histogram(binwidth=.05)
 ```
 
-Compare most-confident class for each image with expert level. 
+Compare labels for each image with expert label.
 
 ```{r}
-library(caret)
-
-maxLabs <- select(labelData,subject_id,Expert.Label) %>%
+userLabs <- select(labelData,subject_id,Expert.Label) %>%
   rename(image=subject_id)%>%
-  merge(maxLabs) %>%
-  mutate(Agree = Expert.Label==maxLabel)
+  merge(classData) 
 
-# confusionMatrix(as.factor(maxLabs$Expert.Label), as.factor(maxLabs$maxLabel), positive = "True")
+cm<-confusionMatrix(as.factor(userLabs$Expert.Label), as.factor(userLabs$label), positive = "True")
 
-LabSummary<-maxLabs %>%
-  group_by(Expert.Label) %>%
-  summarize(Correct = sum(Agree==TRUE)/n())
+cm_d <- as.data.frame(cm$table) # extract the confusion matrix values as data.frame
+cm_st <-data.frame(cm$overall) # confusion matrix statistics as data.frame
+cm_st$cm.overall <- round(cm_st$cm.overall,2) # round the values
+cm_d$diag <- cm_d$Prediction == cm_d$Reference # Get the Diagonal
+cm_d$ndiag <- cm_d$Prediction != cm_d$Reference # Off Diagonal     
+cm_d[cm_d == 0] <- NA # Replace 0 with NA for white tiles
+cm_d$Reference <-  reverse.levels(cm_d$Reference) # diagonal starts at top left
+cm_d$ref_freq <- cm_d$Freq * ifelse(is.na(cm_d$diag),-1,1)
 
-ggplot(LabSummary,aes(Expert.Label,Correct,fill=Expert.Label))+geom_col()+
-  theme(legend.position = 'none')
+ggplot(data = cm_d, aes(x = Prediction , y =  Reference, fill = Freq))+
+  scale_x_discrete(position = "top") +
+  geom_tile(data = cm_d,aes(fill = ref_freq)) +
+  scale_fill_viridis() +
+  geom_text(aes(label = Freq), color = 'black', size = 3)+
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        legend.position = "none",
+        panel.border = element_blank(),
+        plot.background = element_blank(),
+        axis.line = element_blank(),
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust=0)
+        )
 
 ```
