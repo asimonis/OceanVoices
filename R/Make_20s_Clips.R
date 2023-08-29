@@ -13,9 +13,9 @@ library(tuneR)
 library(lubridate)
 source('C:/Users/anne.simonis.NMFS/Documents/GitHub/Soundscapes/getClipFromDf.R')
 
-WavDir<-'F:/CCES_2018_RECORDINGS/Drift-10'
+WavDir<-'E:/CCES_2018_RECORDINGS/Drift-10'
 DepID<-'CCES_010'
-OutDir<-'F:/Zooniverse Clips/CCES_010/20-second clips_full bandwidth'
+OutDir<-'E:/Zooniverse Clips/CCES_010/20-second clips_full bandwidth'
 dir.create(OutDir)
 
 # 1. Extract times from directory of wav files

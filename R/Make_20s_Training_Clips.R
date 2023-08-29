@@ -1,4 +1,4 @@
-@@ -0,0 +1,67 @@
+
   #Create training clips for Citizen Science Project 
   #Anne Simonis
   #6/1/2022
@@ -10,12 +10,13 @@
   library(PAMpal)
 library(tuneR)
 library(lubridate)
+library(here)
 source('C:/Users/anne.simonis.NMFS/Documents/GitHub/Soundscapes/getClipFromDf.R')
 
-ShipDetFile<-'D:/Analysis/CCES/Soundscapes/Ship Detections/CCES_010/CCES_010_ShipLogs_aes.csv'
-WavDir<-'F:/CCES_2018_RECORDINGS/Drift-10'
-DepID<-'CCES_010_Ship'
-OutDir<-'D:/Recordings/CCES_20s clips/CCES_010_ShipDetections'
+ShipDetFile<-here('data','ADRIFT_030_ShipLog.csv')
+WavDir<-'F:/ADRIFT_RECORDINGS/ADRIFT_030'
+DepID<-'ADRIFT_030_Ship'
+OutDir<-'D:/Recordings/ADRIFT_20s clips/ADRIFT_030_ShipDetections'
 
 #1. Load dataframe from manual logs
 df <- read.csv(ShipDetFile, stringsAsFactors = FALSE)
