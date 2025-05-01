@@ -1,0 +1,65 @@
+---
+title: "Zooniverse_Processing_DataPointTranslation"
+format: html
+editor: visual
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message=FALSE)
+```
+
+```{r}
+library("easypackages")
+libraries("rjson","dplyr","here","ggplot2","viridis","caret","likert","jsonlite")
+```
+
+```{r}
+classCsv <- here('data', 'Zooniverse Labels', 'ocean-voices-classifications_2025Apr30.csv')
+classData <- read.csv(classCsv, stringsAsFactors = FALSE) 
+classData$created_at <- as.POSIXct(classData$created_at, format='%Y-%m-%d %H:%M:%S UTC', tz='UTC')
+```
+
+### We only want to look at data from "Spectral Band Identification" workflow
+
+```{r}
+classData <- filter(classData, workflow_name %in% c('Spectral Band Identification'))
+```
+
+### Pull y-values from user annotations
+
+```{r}
+y_values<-matrix(NA,nrow=nrow(classData),ncol=4)
+
+for(s in 1:nrow(classData)){
+# JSON string 
+json_str <- classData$annotations[s]
+
+# Parse the JSON 
+parsed <- fromJSON(json_str)
+
+# Extract the image height & user-defined y-values
+if(length(parsed[[1]]$value)){
+y_values[s,1:length(parsed[[1]]$value)] <- sapply(parsed[[1]]$value, function(point) point$y)
+}}
+```
+
+### Transform image data points to frequencies
+
+```{r}
+#Note, the LTSA is only part of the uploaded image, so the pixel numbers for 0 kHz and 100 kHz were defined by 5 separate point selections. The mean value of those 5 points is used for xmin and xmax. 
+
+#The axes are from an origin in the top left corner with x increasing to the right and y increasing down. 
+
+xmin<-1041.521
+xmax<-86.21665
+fmin<-0
+fmax<-100
+
+# Function to map pixel value to kHz (0 to 100)
+pixel_to_kHz <- function(x) {
+  freq <- ((x -xmin) / (xmax - xmin)) * (fmax-fmin) +fmin
+  return(freq)
+}
+
+frequencies <- pixel_to_kHz(y_values)
+```

@@ -1,0 +1,78 @@
+---
+title: "Zooniverse Processing Gg"
+output: html_document
+date: "2025-04-17"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message=FALSE)
+```
+
+```{r}
+library(rjson)
+library(dplyr)
+library(here)
+library(ggplot2)
+library(viridis)
+library(caret)
+library(likert)
+```
+
+### 1. Use Panoptes Aggregator to extract data from questions
+
+Aggregator config files are saved in the "Aggregate" folder within the Ocean Voices Repository
+
+### 2. Define retired images that have spectral banding
+
+```{r}
+#Import list of subjects for all workflows; only save CalCurCeas workflow
+Manifest<-read.csv(file=here('data','Zooniverse Labels','ocean-voices-subjects.csv'))
+Manifest<-filter(Manifest, workflow_id==28567)
+Manifest$filename<-sapply(Manifest$metadata, function(x) {
+  fromJSON(x)[1]$Filename
+})
+
+#Import data from questions (extracted from Panoptes Aggregator)
+Questions<-read.csv(file=here('data','Zooniverse Labels','question_extractor_extractions.csv'))
+
+#Define subjects where 3 or more people said spectral bands were present
+SpectralBands<-Questions %>%
+  filter(workflow_id==28567) %>%
+  filter(data.yes.i.see.spectral.bands==1)%>%
+  group_by(subject_id) %>%
+  summarise(Number=n()) %>%
+  filter(Number>=3)
+
+#Save Index for filenames with spectral bands present
+SpectralBands$filename<-NA
+for(s in 1:nrow(SpectralBands)){
+  Ind<-which(Manifest$subject_id==SpectralBands$subject_id[s])
+  if(length(Ind)>0){
+  SpectralBands$filename[s]<-Manifest$filename[Ind]
+  remove(Ind)}
+}
+
+#Remove NAs from dataframe 
+#If image had spectral bands but wasn't retired yet it would have an NA filename
+SpectralBands<-na.omit(SpectralBands)
+```
+
+### Copy images with spectral banding to a new folder
+
+```{r}
+# Define source and destination directories
+source_dir <- "C:/Users/annes/Documents/CalCurCEAS/CalCurCeas_023/"
+dest_dir <- "C:/Users/annes/Documents/CalCurCEAS/SpectralBanding/CalCurCeas_023"
+# Create destination directory if it doesn't exist
+if (!dir.exists(dest_dir)) {
+  dir.create(dest_dir, recursive = TRUE)
+}
+
+# Construct full paths for source and destination files
+source_paths <- file.path(source_dir, SpectralBands$filename)
+dest_paths <- file.path(dest_dir, SpectralBands$filename)
+
+# Copy files
+copy_results <- file.copy(from = source_paths, to = dest_paths, overwrite = TRUE)
+
+```

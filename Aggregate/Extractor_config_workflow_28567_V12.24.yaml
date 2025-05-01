@@ -1,0 +1,8 @@
+extractor_config:
+    question_extractor:
+    -   task: T0
+    -   task: T1
+workflow_id: 28567
+workflow_version:
+    max: '12.24'
+    min: '9.2'

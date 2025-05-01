@@ -1,0 +1,10 @@
+extractor_config:
+    point_extractor_by_frame:
+    -   details: {}
+        task: T0
+        tools:
+        - 0
+workflow_id: 28767
+workflow_version:
+    max: '3.6'
+    min: '3.5'

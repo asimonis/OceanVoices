@@ -1,0 +1,8 @@
+T0.answers.0.label: Yes. Dolphin echolocation is present.
+T0.answers.1.label: 'No. I don''t see any dolphin echolocation here. '
+T0.answers.2.label: I'm not sure.
+T0.question: 'Is there dolphin echolocation present in this hour? '
+T1.answers.0.label: 'Yes. I see spectral bands. '
+T1.answers.1.label: No. There are no spectral bands present.
+T1.answers.2.label: I'm not sure
+T1.question: 'Do you see spectral banding in the dolphin detection? '
